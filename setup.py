@@ -14,6 +14,7 @@ setup(
     install_requires=[
         "Django",
         "wagtail",
+        "lxml",
     ],
     tests_require=[
         "factory-boy==2.11.1",

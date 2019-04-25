@@ -5,7 +5,7 @@ from wagtailimportexport.compat import AdminPageChooser, Page, WAGTAIL_VERSION_2
 
 
 admin_page_params = {
-    'can_choose_root': True,
+    'can_choose_root': False,   # True causes issues during import and is no longer needed
     'show_edit_link': False,
 }
 

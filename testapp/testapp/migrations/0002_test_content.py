@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
             name='TestPage',
             fields=[
                 ('page_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='wagtailcore.Page')),
-                ('body', wagtail.core.fields.StreamField([('heading', wagtail.core.blocks.CharBlock()), ('content', wagtail.core.blocks.RichTextBlock()), ('link', wagtail.core.blocks.PageChooserBlock()), ('image', wagtail.images.blocks.ImageChooserBlock()), ('snippet', wagtail.snippets.blocks.SnippetChooserBlock(testapp.models.TestSnippet))], blank=True, null=True)),
+                ('body', wagtail.core.fields.StreamField([('content', wagtail.core.blocks.RichTextBlock()), ('link', wagtail.core.blocks.PageChooserBlock()), ('struct', wagtail.core.blocks.StructBlock([('link', wagtail.core.blocks.PageChooserBlock()), ('content', wagtail.core.blocks.RichTextBlock())])), ('stream', wagtail.core.blocks.StreamBlock([('link', wagtail.core.blocks.PageChooserBlock()), ('content', wagtail.core.blocks.RichTextBlock())]))], blank=True, null=True)),
                 ('image', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='wagtailimages.Image')),
                 ('link', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='wagtailcore.Page')),
             ],
@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='testsnippet',
             name='body',
-            field=wagtail.core.fields.StreamField([('heading', wagtail.core.blocks.CharBlock()), ('content', wagtail.core.blocks.RichTextBlock()), ('link', wagtail.core.blocks.PageChooserBlock()), ('image', wagtail.images.blocks.ImageChooserBlock())], blank=True, null=True),
+            field=wagtail.core.fields.StreamField([('content', wagtail.core.blocks.RichTextBlock()), ('link', wagtail.core.blocks.PageChooserBlock()), ('struct', wagtail.core.blocks.StructBlock([('link', wagtail.core.blocks.PageChooserBlock()), ('content', wagtail.core.blocks.RichTextBlock())])), ('stream', wagtail.core.blocks.StreamBlock([('link', wagtail.core.blocks.PageChooserBlock()), ('content', wagtail.core.blocks.RichTextBlock())]))], blank=True, null=True),
         ),
         migrations.AddField(
             model_name='testsnippet',
@@ -55,5 +55,15 @@ class Migration(migrations.Migration):
             model_name='testpage',
             name='snippet',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='testapp.TestSnippet'),
+        ),
+        migrations.AddField(
+            model_name='testpage',
+            name='text',
+            field=wagtail.core.fields.RichTextField(blank=True, null=True),
+        ),
+        migrations.AlterField(
+            model_name='testsnippet',
+            name='text',
+            field=wagtail.core.fields.RichTextField(blank=True, null=True),
         ),
     ]

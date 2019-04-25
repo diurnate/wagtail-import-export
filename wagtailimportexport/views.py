@@ -1,6 +1,9 @@
 import io
 import json
+import os
 import re
+import tempfile
+import zipfile
 
 from django.http import JsonResponse, FileResponse
 from django.shortcuts import redirect, render
@@ -17,7 +20,11 @@ from wagtailimportexport.exporting import (
     zip_content,
 )
 from wagtailimportexport.forms import ExportForm, ImportFromAPIForm, ImportFromFileForm
-from wagtailimportexport.importing import import_pages
+from wagtailimportexport.importing import (
+    import_pages,
+    import_snippets,
+    import_images,
+)
 
 
 def index(request):
@@ -68,7 +75,7 @@ def import_from_api(request):
 
 def import_from_file(request):
     """
-    Import a part of a source site's page tree via an import of a JSON file
+    Import a part of a source site's page tree via an import of a ZIP file
     exported to a user's filesystem from the source site's Wagtail Admin
 
     The source site's base url and the source page id of the point in the
@@ -78,21 +85,27 @@ def import_from_file(request):
     if request.method == 'POST':
         form = ImportFromFileForm(request.POST, request.FILES)
         if form.is_valid():
-            import_data = json.loads(
-                form.cleaned_data['file'].read().decode('utf-8-sig'))
+            uploaded_file = form.cleaned_data['file']
             parent_page = form.cleaned_data['parent_page']
-
-            try:
-                page_count = import_pages(import_data, parent_page)
-            except LookupError as e:
-                messages.error(request,
-                               _("Import failed: %(reason)s") % {'reason': e})
-            else:
-                messages.success(
-                    request,
-                    ungettext("%(count)s page imported.",
-                              "%(count)s pages imported.", page_count) %
-                    {'count': page_count})
+            with tempfile.TemporaryDirectory() as tempdir:
+                with zipfile.ZipFile(uploaded_file) as zf:
+                    zf.extractall(path=tempdir)
+                content_data_filename = os.path.join(tempdir, 'content.json')
+                with open(content_data_filename, 'rb') as f:
+                    content_data = json.load(f)
+                try:
+                    image_count = import_images(content_data, tempdir)
+                    snippet_count = import_snippets(content_data)
+                    page_count = import_pages(content_data, parent_page)
+                except LookupError as e:
+                    messages.error(request,
+                                   _("Import failed: %(reason)s") % {'reason': e})
+                else:
+                    messages.success(
+                        request,
+                        ungettext("%(count)s page imported.",
+                                  "%(count)s pages imported.", page_count) %
+                        {'count': page_count})
             return redirect('wagtailadmin_explore', parent_page.pk)
     else:
         form = ImportFromFileForm()
@@ -150,8 +163,7 @@ def export(request, page_id, export_unpublished=False):
         return JsonResponse({'error': _('page not found')})
 
     payload = {
-        'pages':
-        export_pages(
+        'pages': export_pages(
             root_page=root_page, export_unpublished=export_unpublished)
     }
 
