@@ -106,15 +106,18 @@ def import_snippets(content_data):
     updating snippet foreign keys everywhere they occur (including recursively walking
     StreamFields). That's a lot more work, -- so, this simpler version for now.)
     """
+    snippet_count = 0
     for model_key in content_data['snippets']:
         Snippet = apps.get_model(model_key)
         for snippet_data in content_data['snippets'][model_key]:
             snippet = Snippet.objects.filter(id=snippet_data['id']).first()
             if snippet is not None:
-                snippet.__dict__.update(**{snippet_data})
+                snippet.__dict__.update(**snippet_data)
             else:
-                snippet = Snippet(**{snippet_data})
+                snippet = Snippet(**snippet_data)
             snippet.save()
+            snippet_count += 1
+    return snippet_count
 
 
 @transaction.atomic()
@@ -131,6 +134,7 @@ def import_images(content_data, path):
     foreign keys to refer to the correct image. But that's a lot more work....)
     """
     Image = get_image_model()
+    image_count = 0
     for image_data in content_data['images']:
         image = Image.objects.filter(id=image_data['id']).first()
         if image is not None:
@@ -153,5 +157,6 @@ def import_images(content_data, path):
             file=open(image_filename, 'rb'),
         )
         image.save()
-
+        image_count +=1
+    return image_count
 
