@@ -6,7 +6,6 @@ from wagtailimportexport.exporting import (
     export_image_data,
     zip_content,
 )
-from wagtailimportexport.compat import Page
 
 logger = logging.getLogger(__name__)
 

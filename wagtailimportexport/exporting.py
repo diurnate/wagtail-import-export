@@ -20,13 +20,17 @@ def export_pages(root_page=None, export_unpublished=False, null_users=False):
 
     By default only published pages are exported.
 
-    If a page is unpublished it and all its descendants are pruned even
+    If a page is unpublished, it and all its descendants are pruned even
     if some of those descendants are themselves published. This ensures
     that there are no orphan pages when the subtree is created in the
     destination site.
 
-    If export_unpublished=True the root_page and all its descendants
+    If export_unpublished=True, the root_page and all its descendants
     are included.
+
+    If null_users=True, Page.owner is nulled for every exported paged.
+    This is useful if the users in the source environment don't exist
+    in the target environment.
     """
     if root_page is None:
         root_page = Page.objects.filter(url_path='/').first()
