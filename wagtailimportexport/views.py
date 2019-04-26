@@ -21,7 +21,7 @@ from wagtailimportexport.exporting import (
 )
 from wagtailimportexport.forms import ExportForm, ImportFromAPIForm, ImportFromFileForm
 from wagtailimportexport.importing import (
-    import_pages,
+    import_pages_by_url,
     import_snippets,
     import_images,
 )
@@ -86,7 +86,6 @@ def import_from_file(request):
         form = ImportFromFileForm(request.POST, request.FILES)
         if form.is_valid():
             uploaded_file = form.cleaned_data['file']
-            parent_page = form.cleaned_data['parent_page']
             with tempfile.TemporaryDirectory() as tempdir:
                 with zipfile.ZipFile(uploaded_file) as zf:
                     zf.extractall(path=tempdir)
@@ -94,19 +93,25 @@ def import_from_file(request):
                 with open(content_data_filename, 'rb') as f:
                     content_data = json.load(f)
                 try:
-                    image_count = import_images(content_data, tempdir)
-                    snippet_count = import_snippets(content_data)
-                    page_count = import_pages(content_data, parent_page)
-                except LookupError as e:
-                    messages.error(request,
-                                   _("Import failed: %(reason)s") % {'reason': e})
+                    results = import_pages_by_url(content_data)
+                    results['images'] = import_images(content_data, tempdir)
+                    results['snippets'] = import_snippets(content_data)
+                except BaseException as e:
+                    messages.error(
+                        request,
+                        _("Import failed: %(reason)s") % {'reason': e})
                 else:
                     messages.success(
                         request,
-                        ungettext("%(count)s page imported.",
-                                  "%(count)s pages imported.", page_count) %
-                        {'count': page_count})
-            return redirect('wagtailadmin_explore', parent_page.pk)
+                        "Imported: %d Pages" % (len(results['pages']), ) +
+                        '. %d Snippets' % (len(results['snippets']), ) +
+                        '. %d Images' % (len(results['images']), ))
+                    if len(results['errors']) > 0 or len(
+                            results['failures']) > 0:
+                        messages.error(request, '. '.join(results['errors']))
+                    if len(results['warnings']) > 0:
+                        messages.warning(request,
+                                         '. '.join(results['warnings']))
     else:
         form = ImportFromFileForm()
 
@@ -125,18 +130,22 @@ def export_to_file(request):
         form = ExportForm(request.POST)
         if form.is_valid():
             content_data = {
-                'pages': export_pages(
+                'pages':
+                export_pages(
                     root_page=form.cleaned_data['root_page'],
                     export_unpublished=form.cleaned_data['export_unpublished'],
                     null_users=form.cleaned_data['null_users'],
                 ),
-                'snippets': export_snippets(),
-                'images': export_image_data(null_users=form.cleaned_data['null_users']),
+                'snippets':
+                export_snippets(),
+                'images':
+                export_image_data(null_users=form.cleaned_data['null_users']),
             }
             filedata = zip_content(content_data)
             payload = io.BytesIO(filedata)
             response = FileResponse(payload)
-            response['Content-Disposition'] = 'attachment; filename="content.zip"'
+            response[
+                'Content-Disposition'] = 'attachment; filename="content.zip"'
             response.content_type = 'application/zip'
             return response
     else:
@@ -163,7 +172,8 @@ def export(request, page_id, export_unpublished=False):
         return JsonResponse({'error': _('page not found')})
 
     payload = {
-        'pages': export_pages(
+        'pages':
+        export_pages(
             root_page=root_page, export_unpublished=export_unpublished)
     }
 

@@ -28,12 +28,6 @@ class ImportFromAPIForm(forms.Form):
 
 class ImportFromFileForm(forms.Form):
     file = forms.FileField(label=_("File to import"))
-    parent_page = forms.ModelChoiceField(
-        queryset=Page.objects.all(),
-        widget=AdminPageChooser(**admin_page_params),
-        label=_("Destination parent page"),
-        help_text=_("Imported pages will be created as children of this page.")
-    )
 
 
 class ExportForm(forms.Form):
