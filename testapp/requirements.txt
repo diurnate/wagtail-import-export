@@ -1,2 +1,28 @@
-Django>=2.0,<2.1
-wagtail>=2.2,<2.3
+Django==2.0.13
+wagtail==2.2.2
+-e git+https://SandyTruth@github.com/diurnate/wagtail-import-export.git@7c6688d76c2065fed8bf0c2b819e8e8ec3b1496a#egg=wagtail_import_export
+## The following requirements were added by pip freeze:
+beautifulsoup4==4.6.0
+certifi==2019.3.9
+chardet==3.0.4
+django-modelcluster==4.4
+django-taggit==0.24.0
+django-treebeard==4.3
+djangorestframework==3.9.3
+draftjs-exporter==2.1.5
+factory-boy==2.11.1
+Faker==1.0.5
+html5lib==1.0.1
+idna==2.8
+lxml==4.3.3
+Pillow==5.4.1
+python-dateutil==2.8.0
+pytz==2019.1
+requests==2.21.0
+six==1.12.0
+text-unidecode==1.2
+Unidecode==1.0.23
+urllib3==1.24.2
+wagtail-factories==1.1.0
+webencodings==0.5.1
+Willow==1.1

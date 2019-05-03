@@ -1,5 +1,11 @@
-import io, json, logging, os, re, sys
+import io
+import json
+import logging
+import os
+import re
+import sys
 from lxml import etree
+
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.files import File
@@ -9,7 +15,6 @@ from modelcluster.models import get_all_child_relations
 from wagtail.core.blocks import (
     PageChooserBlock, RichTextBlock, StructBlock, StreamBlock, StreamValue)
 from wagtail.core.rich_text import RichText
-
 from wagtail.core.fields import RichTextField, StreamField
 from wagtail.images import get_image_model
 from wagtailimportexport.compat import Page
@@ -170,11 +175,11 @@ def update_page_foreign_keys(content_data, page_id_map):
     results = {'warnings': [], 'errors': [], 'failures': []}
     for index, page_record in enumerate(content_data['pages']):
         model_key = '.'.join([page_record['app_label'], page_record['model']])
-        PageModel = apps.get_model(model_key)
+        page_model = apps.get_model(model_key)
         if model_key not in fields_map:
             fields_map[model_key] = {
                 field.name: field
-                for field in PageModel._meta.fields
+                for field in page_model._meta.fields
             }
         model_fields = fields_map[model_key]
         page_content = page_record['content']
@@ -216,19 +221,20 @@ def update_page_foreign_keys(content_data, page_id_map):
 def update_page_fks_in_field(value, page_id, field_name, page_id_map):
     """Update the field value (a page id) according to the page_id_map, if found."""
     logging.debug("## update_page_fks_in_field: %r %r" % (page_id, field_name))
+    results = {'warnings': [], 'errors': [], 'failures': []}
     if value in page_id_map:
         value = page_id_map[value]
     else:
-        if field.null:
+        if field_name.null:
             results['warnings'].append(
-                "%s(id=%s).%s=%d not found, setting null" %
-                (model_key, page_id, field_name, value))
+                "Page(id=%s).%s=%d not found, setting null" %
+                (page_id, field_name, value))
             value = None
         else:
             results['errors'].append(
-                "%s(id=%s).%s=%d not found, CANNOT SET NULL" %
-                (model_key, page_id, field_name, value))
-    return value, result
+                "Page(id=%s).%s=%d not found, CANNOT SET NULL" %
+                (page_id, field_name, value))
+    return value, results
 
 
 def update_page_fks_in_rich_text(value, page_id, field_name, page_id_map):
@@ -358,18 +364,18 @@ def import_pages_content(content_data):
     for page_record in content_data['pages']:
         page_content = page_record['content']
         page_id = page_content['pk']
-        Model = apps.get_model(page_record['app_label'], page_record['model'])
-        page_content['content_type'] = ContentType.objects.get_for_model(Model)
+        model = apps.get_model(page_record['app_label'], page_record['model'])
+        page_content['content_type'] = ContentType.objects.get_for_model(model)
         page_content['live_revision'] = None
         if page_id in existing_pages:
             specific_page = existing_pages[page_id]
-            if specific_page.__class__ != Model:
+            if specific_page.__class__ != model:
                 result['warnings'].append(
                     "Existing Page(id=%d) class %s != import class %s" %
                     (specific_page.id, specific_page.__class__.__name__,
-                     Model.__name__))
+                     model.__name__))
         else:
-            specific_page = Model()
+            specific_page = model()
         logging.debug(page_content)
         try:
             specific_page = update_page_fields(specific_page, page_content)
@@ -377,7 +383,7 @@ def import_pages_content(content_data):
             result['pages'].append("(%d) %s" % (specific_page.id, specific_page.title))
         except:
             result['failures'].append(
-                "%s(id=%d) could not be saved: %s" % (Model.__name__, page_id,
+                "%s(id=%d) could not be saved: %s" % (model.__name__, page_id,
                                                       sys.exc_info()[1]))
             logging.debug(result)
             raise
@@ -424,7 +430,6 @@ def stream_data_to_stream_import_data(stream_data, stream_block):
     return stream_import_data
 
 
-
 def import_snippets(content_data):
     """
     Import the snippets given in the content_data (content.json from exporting).
@@ -464,10 +469,10 @@ def import_images(content_data, path):
       at image file name and overwrite images with the same file name, and update the 
       foreign keys to refer to the correct image. But that's a lot more work....)
     """
-    Image = get_image_model()
+    image_model = get_image_model()
     imported_images = []
     for image_data in content_data['images']:
-        image = Image.objects.filter(id=image_data['id']).first()
+        image = image_model.objects.filter(id=image_data['id']).first()
         if image is not None:
             image.__dict__.update(
                 **{
@@ -476,7 +481,7 @@ def import_images(content_data, path):
                     if key != 'file' and value is not None
                 })
         else:
-            image = Image(
+            image = image_model(
                 **{
                     key: value
                     for key, value in image_data.items()
